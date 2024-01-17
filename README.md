@@ -23,4 +23,13 @@ API
 - `api/orders`
 - `api/orders/{UUID-order_id}`
 
-
+## Package
+> [!NOTE]
+> List of packages used in the project
+### Package Used
+- `django`
+- `djangorestframework`
+- `djangorestframework-xml`
+- `djoser`
+- `uuid`
+- `drf-nested-routers`
