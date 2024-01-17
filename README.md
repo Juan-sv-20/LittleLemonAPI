@@ -22,6 +22,10 @@ API
 ### URLS Order
 - `api/orders`
 - `api/orders/{UUID-order_id}`
+### URL Manager
+- `api/groups/manager/users`
+### URL Delivery Crew
+- `api/groups/delivery-crew/users`
 
 ## Package
 > [!NOTE]
