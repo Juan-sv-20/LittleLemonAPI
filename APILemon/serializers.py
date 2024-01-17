@@ -43,25 +43,7 @@ class GroupSerializer(serializers.ModelField):
         model = Group
         fields = ['id', 'name']
     
-class CartSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    user_id = serializers.IntegerField(write_only=True)
-    menuitem = MenuItemSerializer(read_only=True)
-    menuitem_id = serializers.IntegerField(write_only=True)
-    quantity = serializers.IntegerField()
-    unit_price = serializers.SerializerMethodField(method_name='unitPrice')
-    price = serializers.SerializerMethodField(method_name='price')
-    
-    class Meta:
-        model = Cart
-        fields = ['id', 'user', 'user_id', 'menuitem', 'menuitem_id', 'quantity', 'unit_price', 'price']
-    
-    def unitPrice(self, product=Cart):
-        return MenuItem.objects.get(pk=product.menuitem_id).price
-    
-    def price(self, product=Cart):
-        return product.unit_price * product.quantity
-    
+
 class OrderSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_id = serializers.IntegerField(write_only=True)

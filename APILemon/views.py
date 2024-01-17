@@ -5,10 +5,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .models import Category, MenuItem
-from .serializers import CategorySerializer, MenuItemSerializer, UserSerializer
+from .models import Category, MenuItem, Cart
+from .serializers import CategorySerializer, MenuItemSerializer, UserSerializer, CartSerializer
 
 from django.contrib.auth.models import User, Group
+
+from decimal import Decimal
 # Create your views here.
 
 def isStaff_Authenticated(request):
@@ -16,6 +18,20 @@ def isStaff_Authenticated(request):
         return True
     else:
         return False
+        #print(request.data['menuitem_id'])
+        item = MenuItem.objects.get(pk=request.data['menuitem_id'])
+        serializer_item = MenuItemSerializer(item)
+        cart = Cart(user=user,menuitem=item,quantity=request.data['quantity'])
+        serializer_cart = CartSerializer(data={
+            'user': 1,
+            'user_id' : 1,
+            'menuitem' : 1,
+            'menuitem_id' : 1, 
+            'quantity': '5'})
+        serializer_cart.is_valid()
+        #serializer_cart.save()
+        
+        return Response(serializer_cart.data,status=status.HTTP_201_CREATED)
 
 @api_view(['POST','GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
