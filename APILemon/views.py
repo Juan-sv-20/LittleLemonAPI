@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from .models import Category, MenuItem
-from .serializers import CategorySerializer, MenuItemSerializer
+from .serializers import CategorySerializer, MenuItemSerializer, UserSerializer
 
 from django.contrib.auth.models import User, Group
 # Create your views here.
@@ -17,25 +17,69 @@ def isStaff_Authenticated(request):
     else:
         return False
 
-@api_view(['GET','POST'])
+@api_view(['POST','GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def manager(request):
-    pass
+    if request.method == 'GET':
+        users = User.objects.all()
+        users = users.filter(groups__name='Manager')
+            
+        serializer_user = UserSerializer(users, many=True)
+            
+        return Response({'Managers' : serializer_user.data}, status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        username = request.data['username']
+    
+        if username:
+            user = get_object_or_404(User, username=username)
+            serializer_user = UserSerializer(user)
+            manager = Group.objects.get(name='Manager')
+            manager.user_set.add(user)
+            return Response(serializer_user.data, status=status.HTTP_201_CREATED)
+        return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET','DELETE'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
-def single_manager(request):
-    pass
+def single_manager(request, id=None):  
+    if id:
+        user = get_object_or_404(User, pk=id)
+        serializer_user = UserSerializer(user)
+        manager = Group.objects.get(name='Manager')
+        manager.user_set.remove(user)
+        return Response(serializer_user.data, status=status.HTTP_200_OK)
+    return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET','POST'])
+@api_view(['POST','GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
 def delivery_crew(request):
-    pass
+    if request.method == 'GET':
+        users = User.objects.all()
+        users = users.filter(groups__name='DeliveryCrew')
+            
+        serializer_user = UserSerializer(users, many=True)
+            
+        return Response({'DeliveryCrew' : serializer_user.data}, status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        username = request.data['username']
+    
+        if username:
+            user = get_object_or_404(User, username=username)
+            serializer_user = UserSerializer(user)
+            manager = Group.objects.get(name='DeliveryCrew')
+            manager.user_set.add(user)
+            return Response(serializer_user.data, status=status.HTTP_201_CREATED)
+        return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET','DELETE'])
+@api_view(['DELETE'])
 @permission_classes([IsAuthenticated, IsAdminUser])
-def single_delivery_crew(request):
-    pass
+def single_delivery_crew(request, id=None):
+    if id:
+        user = get_object_or_404(User, pk=id)
+        serializer_user = UserSerializer(user)
+        manager = Group.objects.get(name='DeliveryCrew')
+        manager.user_set.remove(user)
+        return Response(serializer_user.data, status=status.HTTP_200_OK)
+    return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET','POST'])
 def menu_item(request):

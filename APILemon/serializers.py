@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from .models import Category, MenuItem, Cart, Order, OrderItem
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 import bleach
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -36,6 +36,13 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'username', 'email']
 
+class GroupSerializer(serializers.ModelField):
+    name = serializers.CharField(max_length=255, validators = [UniqueValidator(queryset=Group.objects.all())])
+
+    class Meta:
+        model = Group
+        fields = ['id', 'name']
+    
 class CartSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_id = serializers.IntegerField(write_only=True)
