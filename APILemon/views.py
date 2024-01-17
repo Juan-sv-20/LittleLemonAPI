@@ -1,23 +1,28 @@
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
-from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, BasePermission, SAFE_METHODS
 from django.core.paginator import Paginator, EmptyPage
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.mixins import CreateModelMixin, RetrieveModelMixin, DestroyModelMixin
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 
-from .models import Category, MenuItem, Cart
-from .serializers import CategorySerializer, MenuItemSerializer, UserSerializer, CartSerializer
+from .models import Category, Product, Cart, CartItem, Order, OrderItem
+from .serializers import CartSerializer, CartItemSerializer, addCartitemSerializer, ProductSerializer, CategorySerializer, UserSerializer, OrderItemSerializer, OrderSerializer, CreateOrderSerializer, UpdateOrderSerializer
 
 from django.contrib.auth.models import User, Group
 
 from decimal import Decimal
 # Create your views here.
 
-def isStaff_Authenticated(request):
+""" def isStaff_Authenticated(request):
     if request.user.is_authenticated & request.user.is_staff:
         return True
     else:
-        return False
+        return False 
+        
         #print(request.data['menuitem_id'])
         item = MenuItem.objects.get(pk=request.data['menuitem_id'])
         serializer_item = MenuItemSerializer(item)
@@ -214,4 +219,136 @@ def single_category(request, id=None):
         serializer_category.save()
         
         return Response(serializer_category.data, status.HTTP_200_OK)
-        
+ """
+
+@api_view(['POST','GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def manager(request):
+    if request.method == 'GET':
+        users = User.objects.all()
+        users = users.filter(groups__name='Manager')
+            
+        serializer_user = UserSerializer(users, many=True)
+            
+        return Response({'Managers' : serializer_user.data}, status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        username = request.data['username']
+    
+        if username:
+            user = get_object_or_404(User, username=username)
+            serializer_user = UserSerializer(user)
+            manager = Group.objects.get(name='Manager')
+            manager.user_set.add(user)
+            return Response(serializer_user.data, status=status.HTTP_201_CREATED)
+        return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def single_manager(request, id=None):  
+    if id:
+        user = get_object_or_404(User, pk=id)
+        serializer_user = UserSerializer(user)
+        manager = Group.objects.get(name='Manager')
+        manager.user_set.remove(user)
+        return Response(serializer_user.data, status=status.HTTP_200_OK)
+    return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST','GET'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def delivery_crew(request):
+    if request.method == 'GET':
+        users = User.objects.all()
+        users = users.filter(groups__name='DeliveryCrew')
+            
+        serializer_user = UserSerializer(users, many=True)
+            
+        return Response({'DeliveryCrew' : serializer_user.data}, status=status.HTTP_200_OK)
+    if request.method == 'POST':
+        username = request.data['username']
+    
+        if username:
+            user = get_object_or_404(User, username=username)
+            serializer_user = UserSerializer(user)
+            manager = Group.objects.get(name='DeliveryCrew')
+            manager.user_set.add(user)
+            return Response(serializer_user.data, status=status.HTTP_201_CREATED)
+        return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdminUser])
+def single_delivery_crew(request, id=None):
+    if id:
+        user = get_object_or_404(User, pk=id)
+        serializer_user = UserSerializer(user)
+        manager = Group.objects.get(name='DeliveryCrew')
+        manager.user_set.remove(user)
+        return Response(serializer_user.data, status=status.HTTP_200_OK)
+    return Response({'message' : 'error'}, status.HTTP_400_BAD_REQUEST)
+
+class ReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS
+
+class ProductViewSet(ModelViewSet):
+    permission_classes = [(IsAuthenticated and IsAdminUser) | ReadOnly]
+    
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    
+    filter_backends= [SearchFilter, OrderingFilter]
+    search_fields = ['name', 'description']
+    pagination_class = PageNumberPagination
+
+class CategoryViewSet(ModelViewSet):
+    permission_classes = [(IsAuthenticated and IsAdminUser) | ReadOnly]
+    
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+class CartItemViewSet(ModelViewSet):
+    http_method_names = ['get', 'post', 'patch', 'delete']
+    
+    def get_queryset(self):
+        return CartItem.objects.filter(cart_id=self.kwargs['cart_pk'])
+    
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return addCartitemSerializer
+        return CartItemSerializer
+    def get_serializer_context(self):
+        return {'cart_id' : self.kwargs['cart_pk']}
+
+class CartViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
+    
+    http_method_names = ['get', 'post', 'delete']
+    
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    
+class OrderViewSet(ModelViewSet):
+    http_method_names = ['get','patch', 'post', 'delete', 'options', 'head']
+    
+    def get_permissions(self):
+        if self.request.method in ['PATCH', 'DELETE']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+    
+    def create(self, request, *args, **kwargs):
+        serializer = CreateOrderSerializer(data=request.data, context={'user_id': self.request.user.id})
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save()
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateOrderSerializer
+        elif self.request.method == 'PATCH':
+            return UpdateOrderSerializer
+        return OrderSerializer
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return Order.objects.all()
+        elif user.groups.filter(name='DeliveryCrew').exists():
+            return Order.objects.filter(delivery_crew=user)
+        return Order.objects.filter(owner=user)

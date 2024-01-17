@@ -9,6 +9,8 @@ djangorestframework = "*"
 djangorestframework-xml = "*"
 djoser = "*"
 bleach = "*"
+uuid = "*"
+drf-nested-routers = "*"
 
 [dev-packages]
 
