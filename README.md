@@ -1,6 +1,6 @@
 # LittleLemonAPI
  API
-
+<script>api/groups/delivery-crew/users/<int:id></script>
 Routes:
 <ul>
  <li>auth/users/</li>
